@@ -1,13 +1,12 @@
 # hidden files
 .*
-!.git*
-!.editorconfig
-!.nojekyll
-!.travis.yml
+!.github
+!.vscode
 
 # bundler cache
 _site
 vendor
+Gemfile.lock
 
 # rubygem
 *.gem
