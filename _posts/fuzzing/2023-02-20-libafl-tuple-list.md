@@ -1,6 +1,6 @@
 ---
 title: LibAFL Tuple List
-date: 2023-04-25
+date: 2023-02-20
 categories: [fuzzing]
 tags: [libafl]
 ---
@@ -8,6 +8,8 @@ tags: [libafl]
 When you are working with LibAFL you will see [tuple_list](https://docs.rs/tuple_list/0.1.3/tuple_list/index.html) everywhere. It is a way to do static dispatch in Rust because it doens't support variadic generics.
 
 You can do static dispatch like below. But problem with that is when you are writing library, you don't want to update the actual source everytime someone wants to add new feature.
+
+# Static Dispatch from (feroxfuzz)[https://github.com/epi052/feroxfuzz]
 
 ```rust
 pub enum CorpusType {
