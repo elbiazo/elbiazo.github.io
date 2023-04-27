@@ -162,3 +162,15 @@ jekyll-archives:
 
 plugins:
   - jekyll-spaceship
+
+
+# Guide from https://lazyren.github.io/devlog/use-utterances-for-jekyll-comments.html
+giscus:
+  repo:                "elbiazo/elbiazo.github.io"
+  repo-id:             "R_kgDOGNShDQ"
+  category:            "Comments"
+  category-id:         "DIC_kwDOGNShDc4CWFIx"
+  mapping:             "pathname"
+  reaction-enabled:    "1"
+  theme:               "dark_dimmed"
+  crossorigin:         "anonymous"
