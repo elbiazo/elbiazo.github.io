@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-gem "jekyll-theme-chirpy", "~> 4.3", ">= 4.3.1"
+gem "jekyll-theme-chirpy", "~> 5.6", ">= 5.6.0"
 
 group :test do
   gem "html-proofer", "~> 3.18"
@@ -20,9 +20,3 @@ gem "wdm", "~> 0.1.1", :install_if => Gem.win_platform?
 
 # Jekyll <= 4.2.0 compatibility with Ruby 3.0
 gem "webrick", "~> 1.7"
-
-# Jekyll plugins
-group :jekyll_plugins do
-  # Mermaid plugin
-  gem 'jekyll-spaceship'
-end
