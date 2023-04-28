@@ -36,7 +36,7 @@ Follow syzkaller (guide)[https://github.com/google/syzkaller/blob/master/docs/li
 I will be using modified version of code shown in official kcov [guide](https://docs.kernel.org/dev-tools/kcov.html)
 Code it will try to get kernel coverage for is `read(-1, NULL, 0);`
 
-Modification is we subtract `5` from kcov address, which effectively gives us the previous instruction. kcov by default gives you addres after `CALL __sanitizer_cov_trace_pc` but syz-cover parses address at `CALL` instruction.
+Modification is we subtract `5` from kcov address, which effectively gives us the previous instruction. kcov by default gives you addres after `CALL __sanitizer_cov_trace_pc` but syz-cover parses address at `CALL` instruction. 5 bytes come from `CALL sanitizer_cov_trace_pc` being 5 bytes. 
 
 Code that calculates the PreviousInstructionPC is [here](https://github.com/google/syzkaller/blob/70a605de85f9d197b61ec86d50dd98b91a39e585/pkg/cover/backend/pc.go#L16)
 
