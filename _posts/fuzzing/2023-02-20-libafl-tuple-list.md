@@ -9,7 +9,7 @@ When you are working with LibAFL you will see [tuple_list](https://docs.rs/tuple
 
 You can do static dispatch like below. But problem with that is when you are writing library, you don't want to update the actual source everytime someone wants to add new feature.
 
-# Static Dispatch from (feroxfuzz)[https://github.com/epi052/feroxfuzz]
+# Static Dispatch from [feroxfuzz](https://github.com/epi052/feroxfuzz)
 
 ```rust
 pub enum CorpusType {
