@@ -314,28 +314,3 @@ Really this is not recommended because you are changing default `.config`. It wi
 https://source.android.com/docs/core/tests/debug/kasan-kcov?hl=zh-cn
 
 ```
-Flashing manually:  
-  
-vendor_dlkm.img needs to be flashed in fastbootd, while the other images needs to be flashed via fastboot/bootloader.  
-  
-How to boot to fastbootd?  
-From running phone:  
-adb reboot fastboot  
-  
-From fastboot/bootloader:  
-fastboot reboot fastboot  
-  
-Once in fastbootd:  
-fastboot flash vendor_dlkm vendor_dlkm.img  
-  
-Boot from fastbootd to fastboot/bootloader to flash dtbo.img, vendor_kernel_boot.img and boot.img:  
-Either select Reboot to bootloader option via buttons  
-or type:
-fastboot reboot bootloader  
-  
-Now in fastboot flash boot.img, dtbo.img and vendor_kernel_boot.img  
-  
-fastboot flash boot boot.img  
-fastboot flash dtbo dtbo.img  
-fastboot flash vendor_kernel_boot vendor_kernel_boot.img
-```
