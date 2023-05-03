@@ -289,11 +289,6 @@ Then get the [factory images](https://developers.google.com/android/images) and 
 
 # Extra Knowledge
 
-## Updating Kernel Config via Default Config (Not Recommended)
-
-Really this is not recommended because you are changing default `.config`. It will always use this config and it might be just wrong. It is just here as reminder.
-
-
 # Resources
 
 ## Pixel 3 Build
