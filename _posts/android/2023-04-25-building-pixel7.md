@@ -57,7 +57,6 @@ mkdir android-kernel
 cd android-kernel
 repo init -u https://android.googlesource.com/kernel/manifest -b android-gs-pantah-5.10-android13-qpr2
 repo sync -c -j`nproc`
-build/build.sh
 ```
 
 # High Level Overview of Building and Flashing custom AOSP and Kernel
