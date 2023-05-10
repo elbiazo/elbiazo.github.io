@@ -306,5 +306,3 @@ Then get the [factory images](https://developers.google.com/android/images) and 
 ## Syzkaller Build
 
 https://source.android.com/docs/core/tests/debug/kasan-kcov?hl=zh-cn
-
-```
