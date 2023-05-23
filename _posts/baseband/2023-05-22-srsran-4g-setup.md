@@ -1,6 +1,6 @@
 ---
 title: srsRan 4G Setup
-date: 2023-04-15
+date: 2023-05-22
 categories: [baseband]
 tags: [setup]
 ---
