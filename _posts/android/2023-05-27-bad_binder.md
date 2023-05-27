@@ -406,7 +406,7 @@ Remember when we do unlinking by calling `epoll_ctl(epfd, EPOLL_CTL_DEL, binder_
 
 ![](/assets/img/2023-05-27-16-43-32.png)
 
-```asm
+```
 // list_del dump during unlinking
 // __list_del
 //  next: 0xffff88803a8fcca8 (addr eppoll_event.wait.next pointing to )
