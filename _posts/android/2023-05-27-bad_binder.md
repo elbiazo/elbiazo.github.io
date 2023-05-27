@@ -203,8 +203,6 @@ f1[epi.pwqlist] --> fp["pwq.wait points to where binder_thread.wait used to be"]
 
 ### list_del operation
 
-^d0b717
-
 ```mermaid
 flowchart LR
 list_del --> __list_del_entry --> __list_del
