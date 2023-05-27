@@ -67,6 +67,9 @@ int main()
 
 ## Allocations
 
+### High Level Flowchart
+
+![](/assets/img/2023-05-27-17-09-41.png)
 
 ### Opening Binder
 
