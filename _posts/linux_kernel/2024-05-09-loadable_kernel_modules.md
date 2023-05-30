@@ -4,18 +4,18 @@ date: 2023-05-08
 categories: [linux_kernel]
 tags: [setup]
 ---
-# Overview
+## Overview
 
 Whether you are fuzzing or looking into certain Linux subsystems, you might need to set up a loadable kernel module if you selected `m` option on kernel config. An example would be something like `Netfilter` which would load that module when you use them dynamically. If you do an `lsmod` you should be able to see some of loadable kernel modules like `nfnetlink` (Netfilter component).  These aren't automatically there when you follow this [syzkaller guide](https://github.com/google/syzkaller/blob/master/docs/linux/setup_ubuntu-host_qemu-vm_x86-64-kernel.md). In this blog, we will compile kernel and setup Qemu image so that it can load these modules.
 
-## lsmod
+### lsmod
 ![](/assets/img/2023-05-09-23-24-48.png)
 
-## modinfo
+### modinfo
 
 ![](/assets/img/2023-05-09-23-24-56.png)
 
-# Compiling Kernel and Image
+## Compiling Kernel and Image
 
 Just follow this [syzkaller guide](https://github.com/google/syzkaller/blob/master/docs/linux/setup_ubuntu-host_qemu-vm_x86-64-kernel.md). By default, Debian image created by `create-image.sh` will be 2G. Sometimes, this is not big enough especially if you compile the kernel with something like Ubuntu config. You can actually expand this image by doing `qemu-img resize stretch.img +20G` (This will increase the image size by 20G but you can change the number).
 
@@ -26,7 +26,7 @@ parted /dev/sda resizepart 1 100%
 resize2fs /dev/sda
 ```
 
-# Compiling Kernel Modules
+## Compiling Kernel Modules
 
 You need to compile Linux kernel module by doing
 ```sh

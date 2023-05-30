@@ -7,9 +7,9 @@ tags: [libafl]
 
 When you are working with LibAFL you will see [tuple_list](https://docs.rs/tuple_list/0.1.3/tuple_list/index.html) everywhere. It is a way to do static dispatch in Rust because it doens't support variadic generics.
 
-You can do static dispatch like below. But problem with that is when you are writing library, you don't want to update the actual source everytime someone wants to add new feature.
+You can do static dispatch like below. But the problem with that is when you are writing library, you don't want to update the actual source everytime someone wants to add new feature.
 
-# Static Dispatch from [feroxfuzz](https://github.com/epi052/feroxfuzz)
+## Static Dispatch from [feroxfuzz](https://github.com/epi052/feroxfuzz)
 
 ```rust
 pub enum CorpusType {
@@ -42,7 +42,7 @@ impl Corpus for CorpusType {
 
 You can also do dynamic dispatch and do [trait object](https://doc.rust-lang.org/book/ch17-02-trait-objects.html) but that will be done in run time.
 
-## Example
+### Example
 
 From [tuple_list doc.rs](https://docs.rs/tuple_list/0.1.3/tuple_list/index.html), you can get this example
 ```rust
@@ -94,7 +94,7 @@ assert_eq!(&c, "abc1");
 
 First you need to define a trait so that each member of tuple list have function you want to call. Then you can call tuplie_list after you impelement (Head, Tail) which calls function one after the other.
 
-## LibAFL
+### LibAFL
 
 In libafl, you will often see this method so that it can give user more flexibility to add their own implementation. In libafl_qemu, you can see this on `QemuEdgeCoverageHelper`.
 

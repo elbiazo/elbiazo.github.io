@@ -5,20 +5,20 @@ categories: [fuzzing]
 tags: [syzkaller, kcov, syz-cover]
 ---
 
-# Overview
+## Overview
 
 If you have used syzkaller, you seen how they have visualizer for kernel [coverage](https://github.com/google/syzkaller/blob/master/docs/coverage.md). You can actually use [syz-cover](https://github.com/google/syzkaller/blob/master/tools/syz-cover/syz-cover.go) to do this with any [kcov](https://docs.kernel.org/dev-tools/kcov.html).
 
-## Syzkaller Coverage Viewer
+### Syzkaller Coverage Viewer
 
 ![](/assets/img/2023-04-27-22-33-53.png)
 
-# Building syz-cover
+## Building syz-cover
 
-## Prereq
+### Prereq
 If you never installed syzkaller before follow this [guide](https://github.com/google/syzkaller/blob/master/docs/linux/setup.md#go-and-syzkaller)
 
-## Build syz-cover (cover)
+### Build syz-cover (cover)
 ```sh
 git clone https://github.com/google/syzkaller
 cd syzkaller
@@ -27,11 +27,11 @@ make cover
 
 syz-cover should be under `syzkaller/bin`.
 
-## Building Kernel and Running it on QEMU
+### Building Kernel and Running it on QEMU
 
 Follow syzkaller (guide)[https://github.com/google/syzkaller/blob/master/docs/linux/setup_ubuntu-host_qemu-vm_x86-64-kernel.md] to setup the environment. Most important part is making sure to enable `CONFIG_KCOV=y` in kernel config.
 
-## Building Test Program
+### Building Test Program
 
 I will be using modified version of code shown in official kcov [guide](https://docs.kernel.org/dev-tools/kcov.html)
 Code it will try to get kernel coverage for is `read(-1, NULL, 0);`
@@ -42,7 +42,7 @@ Code that calculates the PreviousInstructionPC is [here](https://github.com/goog
 
 Copy this code below and compile it by doing `g++ -static -o kcov_test kcov_test.cc`
 
-## kcov_test.cc
+### kcov_test.cc
 
 ```cpp
 #include <stdio.h>
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 ```
 
 
-# Running Test Binary
+## Running Test Binary
 
 Transfer kcov_test to vm and run it.
 
@@ -131,18 +131,18 @@ From same [syzkaller installtion guide](ssh -i $IMAGE/bullseye.id_rsa -p 10021 -
 
 it tells you how you can ssh and scp to the vm
 
-## SSH
+### SSH
 ```sh
 ssh -i $IMAGE/bullseye.id_rsa -p 10021 -o "StrictHostKeyChecking no" root@localhost
 ```
 
-## SCP
+### SCP
 
 ```sh
 scp -i $IMAGE/stretch.id_rsa -P 10021 -o "StrictHostKeyChecking no" <transfer program> root@localhost:<transfer_path>
 ```
 
-# Running syz-cover on kcov.txt
+## Running syz-cover on kcov.txt
 
 kcov_test should have created kcov.txt under same directory. Grab kcov.txt from VM to your host so you can run syz-cover.
 
@@ -163,18 +163,18 @@ syz-cover should look something like this below. It needs to start with `0x`. Al
 0xffffffff810e5400
 ```
 
-## Disassembly at 0xffffffff81b3a121 (First KCOV)
+### Disassembly at 0xffffffff81b3a121 (First KCOV)
 
 ![](/assets/img/2023-04-27-22-34-06.png)
 
-## Running syz-cover
+### Running syz-cover
 
 Note that the reason why you need absolute path is because there is bug where it will break if you don't in earlier version of this tool. Fixed in this [issue](https://github.com/google/syzkaller/issues/3686)
 ```sh
 syz-cover --kernel_src <absolute_linux_kernel_path> --kernel_obj <absolute_linux_kernel_path> kcov.txt                                      
 ```
 
-## Check Result
+### Check Result
 
 Make sure `SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)` is highlighted under `fs/read_write.c`
 
