@@ -31,17 +31,18 @@ github:
   username: elbiazo
 
 twitter:
-  username: biaz0h
+  username: elbiazo1
 
 social:
   # Change to your full name.
   # It will be displayed as the default author of the posts and the copyright owner in the Footer
   name: biazo
-  email: not@elbiazo.com
+  email: elbiazo@icloud.com
   links:
     # The first element serves as the copyright owner's link
     - https://github.com/elbiazo 
-    - https://twitter.com/biaz0h
+    - https://bsky.app/profile/vtl0.bsky.social
+    - https://twitter.com/elbiazo1
 
 google_site_verification: # fill in to your verification string
 
